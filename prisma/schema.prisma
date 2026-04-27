@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+
+  albums       Album[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Album {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title        String
+  slug         String
+  description  String?
+  shareToken   String   @unique
+  isShared     Boolean  @default(false)
+  coverPhotoId String?
+
+  photos       Photo[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@unique([userId, slug])
+}
+
+model Photo {
+  id                  String   @id @default(cuid())
+  albumId             String
+  album               Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  filename            String
+  originalName        String
+  mimeType            String
+  size                Int
+  width               Int?
+  height              Int?
+
+  storageKeyOriginal  String
+  storageKeyLarge     String?
+  storageKeyThumbnail String?
+
+  position            Int      @default(0)
+
+  createdAt           DateTime @default(now())
+
+  @@index([albumId])
+}

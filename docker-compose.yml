@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: photo_albums_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: photo_admin
+      POSTGRES_PASSWORD: photo_password
+      POSTGRES_DB: photo_albums
+    ports:
+      - "5433:5432"
+    volumes:
+      - photo_albums_data:/var/lib/postgresql/data
+
+volumes:
+  photo_albums_data:

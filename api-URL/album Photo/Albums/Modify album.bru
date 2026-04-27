@@ -1,0 +1,19 @@
+meta {
+  name: Modify album
+  type: http
+  seq: 4
+}
+
+patch {
+  url: http://localhost:3001/api/albums/cmog219ma0000ul0n0dj1db54
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Vacances été 2026",
+    "description": "Nouvelle description",
+    "isShared": true
+  }
+}
