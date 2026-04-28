@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import dynamic from 'next/dynamic';
 
 type Photo = {
   id: string;
@@ -27,6 +29,13 @@ type PreviewFile = {
   file: File;
   previewUrl: string;
 };
+
+const SortablePhotos = dynamic(
+  () => import('@/components/albums/SortablePhotos'),
+  {
+    ssr: false,
+  },
+);
 
 export default function AlbumDetailClient({
   album,
@@ -412,46 +421,13 @@ export default function AlbumDetailClient({
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {photos.map((photo) => (
-              <article
-                key={photo.id}
-                className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-900"
-              >
-                <div className="relative aspect-[4/3] w-full">
-                  <Image
-                    src={`/api/files/${photo.storageKeyThumbnail ?? photo.storageKeyLarge ?? photo.storageKeyOriginal}`}
-                    alt={photo.originalName}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover"
-                  />
-                </div>
-
-                <div className="space-y-3 p-4">
-                  <p className="truncate text-sm text-zinc-300">
-                    {photo.originalName}
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setCoverPhoto(photo.id)}
-                      className="rounded-xl border border-emerald-500/20 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-500/10"
-                    >
-                      Couverture
-                    </button>
-
-                    <button
-                      onClick={() => deletePhoto(photo.id)}
-                      className="rounded-xl border border-red-500/20 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          <SortablePhotos
+            albumId={album.id}
+            photos={photos}
+            setPhotos={setPhotos}
+            setCoverPhoto={setCoverPhoto}
+            deletePhoto={deletePhoto}
+          />
         )}
       </section>
     </main>
