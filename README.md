@@ -56,6 +56,8 @@ Ouvre ensuite :
 
 👉 http://localhost:3000
 
+---
+
 ## 🔧 Variables d’environnement
 
 Exemple :
@@ -97,13 +99,16 @@ un écosystème de services (multi-apps)
 un système de comptes partagé entre projets
 une plateforme centralisée (dashboard)
 des fonctionnalités avancées (tri, favoris, watermark, etc.)
-🤝 Contexte
+
+## 🤝 Contexte
 
 Projet personnel développé dans une logique :
 
 pratique (répondre à un vrai besoin)
 technique (progression fullstack)
 produit (créer quelque chose d’utilisable)
+
+---
 
 ## 📌 Statut
 
