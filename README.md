@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📸 Photo Albums App
 
-## Getting Started
+Plateforme web de gestion et de partage d’albums photo.
 
-First, run the development server:
+## 🚀 Objectif du projet
+
+Ce projet a été créé initialement pour répondre à un besoin concret :
+
+👉 Une amie joue sur un serveur GTA RP avec un personnage photographe  
+👉 Elle avait besoin d’un moyen simple et professionnel pour :
+
+- organiser ses photos
+- créer des albums rapidement
+- partager ses photos avec ses clients via un lien
+- offrir une expérience propre et crédible (RP)
+
+L’objectif est donc de proposer une **alternative simple, rapide et élégante** à des outils comme Google Drive ou WeTransfer, mais avec une expérience adaptée à un usage "photographe".
+
+---
+
+## ✨ Fonctionnalités
+
+- 📁 Création d’albums photo
+- 📤 Upload d’images (JPG, PNG, WEBP)
+- 🖼️ Génération automatique de miniatures
+- 🔗 Partage public via lien sécurisé
+- 🔄 Régénération de lien de partage
+- 🔒 Gestion privé / public des albums
+- 🗑️ Suppression d’albums et photos
+- 📦 Téléchargement complet d’un album (ZIP)
+- 🖼️ Choix de la photo de couverture
+- ☁️ Stockage des fichiers via Cloudflare R2
+
+---
+
+## 🛠️ Stack technique
+
+- **Frontend / Backend** : Next.js (App Router)
+- **Base de données** : PostgreSQL + Prisma
+- **Stockage** : Cloudflare R2 (S3 compatible)
+- **Containerisation** : Docker
+- **UI** : TailwindCSS
+
+---
+
+## ⚙️ Installation (dev)
 
 ```bash
+git clone <repo>
+cd photo-albums-app
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
