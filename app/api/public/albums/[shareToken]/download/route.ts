@@ -3,12 +3,26 @@ import path from 'path';
 import JSZip from 'jszip';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+
+export const runtime = 'nodejs';
 
 type Params = {
   params: Promise<{
     shareToken: string;
   }>;
 };
+
+const STORAGE_DRIVER = process.env.STORAGE_DRIVER || 'local';
+
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
 
 function sanitizeFilename(value: string) {
   return value
@@ -17,6 +31,43 @@ function sanitizeFilename(value: string) {
     .replace(/[^a-zA-Z0-9-_ .]/g, '')
     .replace(/\s+/g, '_')
     .slice(0, 80);
+}
+
+async function getLocalPhotoBuffer(storageKey: string) {
+  const filePath = path.join(process.cwd(), 'uploads', storageKey);
+
+  console.log('LOCAL FILE PATH:', filePath);
+
+  return fs.readFile(filePath);
+}
+
+async function getR2PhotoBuffer(storageKey: string) {
+  const result = await r2Client.send(
+    new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: storageKey,
+    }),
+  );
+
+  if (!result.Body) {
+    throw new Error(`Fichier R2 introuvable: ${storageKey}`);
+  }
+
+  const chunks: Uint8Array[] = [];
+
+  for await (const chunk of result.Body as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+  }
+
+  return Buffer.concat(chunks);
+}
+
+async function getPhotoBuffer(storageKey: string) {
+  if (STORAGE_DRIVER === 'r2') {
+    return getR2PhotoBuffer(storageKey);
+  }
+
+  return getLocalPhotoBuffer(storageKey);
 }
 
 export async function GET(_req: Request, { params }: Params) {
@@ -55,27 +106,45 @@ export async function GET(_req: Request, { params }: Params) {
     );
   }
 
-  for (const photo of album.photos) {
-    const filePath = path.join(
-      process.cwd(),
-      'uploads',
-      photo.storageKeyOriginal,
-    );
+  let addedFiles = 0;
 
+  for (const photo of album.photos) {
     try {
-      const fileBuffer = await fs.readFile(filePath);
+      console.log('PHOTO:', photo.originalName);
+      console.log('STORAGE DRIVER:', STORAGE_DRIVER);
+      console.log('STORAGE KEY:', photo.storageKeyOriginal);
+
+      const fileBuffer = await getPhotoBuffer(photo.storageKeyOriginal);
 
       const extension =
         photo.originalName.split('.').pop()?.toLowerCase() || 'jpg';
 
-      const fileName = `${String(photo.position + 1).padStart(3, '0')}-${sanitizeFilename(
-        photo.originalName,
-      )}.${extension}`;
+      const cleanName = sanitizeFilename(
+        photo.originalName.replace(/\.[^/.]+$/, ''),
+      );
+
+      const fileName = `${String(photo.position + 1).padStart(
+        3,
+        '0',
+      )}-${cleanName}.${extension}`;
 
       folder.file(fileName, fileBuffer);
-    } catch {
-      // Si un fichier manque sur le disque, on ignore pour ne pas bloquer tout le ZIP.
+      addedFiles++;
+    } catch (error) {
+      console.error('Impossible d’ajouter la photo au ZIP:', {
+        storageDriver: STORAGE_DRIVER,
+        storageKey: photo.storageKeyOriginal,
+        originalName: photo.originalName,
+        error,
+      });
     }
+  }
+
+  if (addedFiles === 0) {
+    return NextResponse.json(
+      { error: 'Aucune photo trouvée pour générer le ZIP' },
+      { status: 500 },
+    );
   }
 
   const zipBuffer = await zip.generateAsync({
