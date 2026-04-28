@@ -28,9 +28,11 @@ model Album {
   description  String?
   shareToken   String   @unique
   isShared     Boolean  @default(false)
-  coverPhotoId String?
 
-  photos       Photo[]
+  coverPhotoId String?
+  coverPhoto   Photo?   @relation("AlbumCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+
+  photos       Photo[]  @relation("AlbumPhotos")
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -42,7 +44,7 @@ model Album {
 model Photo {
   id                  String   @id @default(cuid())
   albumId             String
-  album               Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  album               Album    @relation("AlbumPhotos", fields: [albumId], references: [id], onDelete: Cascade)
 
   filename            String
   originalName        String
@@ -58,6 +60,8 @@ model Photo {
   position            Int      @default(0)
 
   createdAt           DateTime @default(now())
+
+  coveredAlbums       Album[]  @relation("AlbumCover")
 
   @@index([albumId])
 }

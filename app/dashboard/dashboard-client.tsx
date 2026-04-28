@@ -17,6 +17,11 @@ type Album = {
   isShared: boolean;
   shareToken: string;
   createdAt: string;
+  coverPhoto: {
+    id: string;
+    storageKeyOriginal: string;
+    storageKeyThumbnail: string | null;
+  } | null;
   photos: {
     id: string;
     storageKeyOriginal: string;
@@ -207,9 +212,11 @@ export default function DashboardClient({ user }: { user: User }) {
                   className="group overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 transition hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden">
-                    {album.photos?.length > 0 ? (
+                    {album.coverPhoto || album.photos?.length > 0 ? (
                       <img
                         src={`/api/files/${
+                          album.coverPhoto?.storageKeyThumbnail ??
+                          album.coverPhoto?.storageKeyOriginal ??
                           album.photos[0].storageKeyThumbnail ??
                           album.photos[0].storageKeyOriginal
                         }`}

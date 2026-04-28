@@ -41,6 +41,8 @@ export default function AlbumDetailClient({
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [isShared, setIsShared] = useState(album.isShared);
   const [shareToken, setShareToken] = useState(album.shareToken);
+  const [title, setTitle] = useState(album.title);
+  const [savingTitle, setSavingTitle] = useState(false);
 
   async function uploadPhotos(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -120,6 +122,27 @@ export default function AlbumDetailClient({
     }
   }
 
+  async function setCoverPhoto(photoId: string) {
+    const response = await fetch(`/api/albums/${album.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        coverPhotoId: photoId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      toast.success('Couverture mise à jour');
+      router.refresh();
+    } else {
+      toast.error(data.error ?? 'Erreur lors du changement de couverture');
+    }
+  }
+
   async function toggleShare() {
     const response = await fetch(`/api/albums/${album.id}`, {
       method: 'PATCH',
@@ -150,6 +173,49 @@ export default function AlbumDetailClient({
     }
   }
 
+  async function updateAlbumTitle() {
+    const cleanTitle = title.trim();
+
+    if (!cleanTitle) {
+      toast.error('Le nom de l’album ne peut pas être vide');
+      return;
+    }
+
+    if (cleanTitle === album.title) {
+      return;
+    }
+
+    try {
+      setSavingTitle(true);
+
+      const response = await fetch(`/api/albums/${album.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: cleanTitle,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error ?? 'Erreur lors du renommage');
+        return;
+      }
+
+      setTitle(data.album.title);
+      toast.success('Album renommé');
+      router.refresh();
+    } catch (error) {
+      console.error('UPDATE TITLE ERROR:', error);
+      toast.error('Impossible de renommer l’album');
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <header className="border-b border-white/10">
@@ -162,7 +228,26 @@ export default function AlbumDetailClient({
               ← Retour au dashboard
             </button>
 
-            <h1 className="text-2xl font-bold">{album.title}</h1>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    updateAlbumTitle();
+                  }
+                }}
+                className="rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-2xl font-bold text-white outline-none focus:border-white/30"
+              />
+
+              <button
+                onClick={updateAlbumTitle}
+                disabled={savingTitle}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-200 disabled:opacity-60"
+              >
+                {savingTitle ? 'Sauvegarde...' : 'Renommer'}
+              </button>
+            </div>
 
             {album.description && (
               <p className="mt-1 text-sm text-zinc-400">{album.description}</p>
@@ -343,17 +428,26 @@ export default function AlbumDetailClient({
                   />
                 </div>
 
-                <div className="flex items-center justify-between gap-3 p-4">
+                <div className="space-y-3 p-4">
                   <p className="truncate text-sm text-zinc-300">
                     {photo.originalName}
                   </p>
 
-                  <button
-                    onClick={() => deletePhoto(photo.id)}
-                    className="rounded-xl border border-red-500/20 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
-                  >
-                    Supprimer
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setCoverPhoto(photo.id)}
+                      className="rounded-xl border border-emerald-500/20 px-3 py-2 text-sm text-emerald-300 hover:bg-emerald-500/10"
+                    >
+                      Couverture
+                    </button>
+
+                    <button
+                      onClick={() => deletePhoto(photo.id)}
+                      className="rounded-xl border border-red-500/20 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}

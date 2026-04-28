@@ -18,6 +18,7 @@ export async function GET() {
       _count: {
         select: { photos: true },
       },
+      coverPhoto: true,
       photos: {
         take: 1,
         orderBy: { createdAt: 'asc' },

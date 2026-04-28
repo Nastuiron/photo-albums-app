@@ -57,7 +57,7 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 
   const body = await req.json();
-  const { title, description, isShared } = body;
+  const { title, description, isShared, coverPhotoId } = body;
 
   let slug = existingAlbum.slug;
 
@@ -82,13 +82,36 @@ export async function PATCH(req: Request, { params }: Params) {
     }
   }
 
+  if (coverPhotoId) {
+    const photo = await prisma.photo.findFirst({
+      where: {
+        id: coverPhotoId,
+        albumId,
+      },
+    });
+
+    if (!photo) {
+      return NextResponse.json(
+        { error: 'Cover photo not found in this album' },
+        { status: 400 },
+      );
+    }
+  }
+
   const album = await prisma.album.update({
     where: { id: albumId },
     data: {
       title: title ?? existingAlbum.title,
-      description,
+      description:
+        typeof description === 'string'
+          ? description
+          : existingAlbum.description,
       isShared:
         typeof isShared === 'boolean' ? isShared : existingAlbum.isShared,
+      coverPhotoId:
+        typeof coverPhotoId === 'string'
+          ? coverPhotoId
+          : existingAlbum.coverPhotoId,
       slug,
     },
   });
