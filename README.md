@@ -51,3 +51,60 @@ cd photo-albums-app
 npm install
 npm run dev
 ```
+
+Ouvre ensuite :
+
+👉 http://localhost:3000
+
+## 🔧 Variables d’environnement
+
+Exemple :
+
+```bash
+DATABASE_URL=...
+JWT_SECRET=...
+NEXT_PUBLIC_APP_URL=...
+STORAGE_DRIVER=r2 ou local
+
+R2_ACCOUNT_ID=...
+R2_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=...
+
+COOKIE_SECURE="false"
+```
+
+---
+
+## 🐳 Déploiement Docker
+
+docker compose up -d --build
+
+Puis appliquer les migrations :
+
+```bash
+docker compose exec app npx prisma migrate deploy
+```
+
+---
+
+## 📈 Vision
+
+Ce projet est pensé pour évoluer vers :
+
+un écosystème de services (multi-apps)
+un système de comptes partagé entre projets
+une plateforme centralisée (dashboard)
+des fonctionnalités avancées (tri, favoris, watermark, etc.)
+🤝 Contexte
+
+Projet personnel développé dans une logique :
+
+pratique (répondre à un vrai besoin)
+technique (progression fullstack)
+produit (créer quelque chose d’utilisable)
+
+## 📌 Statut
+
+🟢 En développement actif
