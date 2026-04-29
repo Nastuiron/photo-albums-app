@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  login as loginApi,
+  signup as signupApi,
+} from '@/features/auth/services/auth.api';
 
 type Mode = 'login' | 'signup';
 
@@ -19,46 +23,34 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+    try {
+      if (mode === 'signup') {
+        await signupApi({
+          email,
+          password,
+          name,
+        });
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password,
-        name: mode === 'signup' ? name : undefined,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setError(data.error || 'Une erreur est survenue');
-      setLoading(false);
-      return;
-    }
-
-    if (mode === 'signup') {
-      const loginResponse = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!loginResponse.ok) {
-        setError('Compte créé, mais connexion impossible.');
-        setLoading(false);
-        return;
+        await loginApi({
+          email,
+          password,
+        });
+      } else {
+        await loginApi({
+          email,
+          password,
+        });
       }
-    }
 
-    router.push('/dashboard');
-    router.refresh();
+      router.push('/dashboard');
+      router.refresh();
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Une erreur est survenue',
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

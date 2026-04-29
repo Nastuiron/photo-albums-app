@@ -2,28 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import dynamic from 'next/dynamic';
+import type { Photo, AlbumDetail } from '@/features/albums/types/album.types';
+import {
+  regenerateShareToken as regenerateShareTokenApi,
+  updateAlbum as updateAlbumApi,
+} from '@/features/albums/services/album.api';
 
-type Photo = {
-  id: string;
-  originalName: string;
-  storageKeyOriginal: string;
-  storageKeyLarge: string | null;
-  storageKeyThumbnail: string | null;
-  createdAt: Date;
-};
-
-type Album = {
-  id: string;
-  title: string;
-  description: string | null;
-  isShared: boolean;
-  shareToken: string;
-  photos: Photo[];
-};
+import {
+  deletePhoto as deletePhotoApi,
+  uploadPhotos as uploadPhotosApi,
+} from '@/features/albums/services/photo.api';
 
 type PreviewFile = {
   file: File;
@@ -31,7 +21,7 @@ type PreviewFile = {
 };
 
 const SortablePhotos = dynamic(
-  () => import('@/components/albums/SortablePhotos'),
+  () => import('@/features/albums/components/SortablePhotos'),
   {
     ssr: false,
   },
@@ -41,7 +31,7 @@ export default function AlbumDetailClient({
   album,
   appUrl,
 }: {
-  album: Album;
+  album: AlbumDetail;
   appUrl: string;
 }) {
   const router = useRouter();
@@ -67,26 +57,102 @@ export default function AlbumDetailClient({
         formData.append('photos', file);
       });
 
-      const response = await fetch(`/api/albums/${album.id}/photos`, {
-        method: 'POST',
-        body: formData,
-      });
+      const data = await uploadPhotosApi(album.id, formData);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setPhotos((current) => [...current, ...data.photos]);
-        files.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
-        setFiles([]);
-        toast.success('Photos uploadées ✅');
-      } else {
-        toast.error(data.error ?? 'Erreur inconnue');
-      }
+      setPhotos((current) => [...current, ...data.photos]);
+      files.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+      setFiles([]);
+      toast.success('Photos uploadées avec succès');
     } catch (error) {
       console.error('UPLOAD ERROR:', error);
-      alert("La requête d'upload a échoué. Regarde le terminal Next.");
+      toast.error("Erreur lors de l'upload des photos");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function deletePhoto(photoId: string) {
+    const confirmed = confirm('Supprimer cette photo ?');
+    if (!confirmed) return;
+
+    try {
+      await deletePhotoApi(album.id, photoId);
+
+      setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+      toast.success('Photo supprimée');
+    } catch (error) {
+      console.error('DELETE PHOTO ERROR:', error);
+      toast.error('Erreur lors de la suppression de la photo');
+    }
+  }
+
+  async function setCoverPhoto(photoId: string) {
+    try {
+      await updateAlbumApi(album.id, {
+        coverPhotoId: photoId,
+      });
+
+      toast.success('Couverture mise à jour');
+      router.refresh();
+    } catch (error) {
+      console.error('SET COVER ERROR:', error);
+      toast.error('Erreur lors du changement de couverture');
+    }
+  }
+
+  async function toggleShare() {
+    try {
+      await updateAlbumApi(album.id, {
+        isShared: !isShared,
+      });
+
+      setIsShared((current) => !current);
+      toast.success(isShared ? 'Partage désactivé' : 'Partage activé');
+    } catch (error) {
+      console.error('TOGGLE SHARE ERROR:', error);
+      toast.error('Impossible de modifier le partage');
+    }
+  }
+
+  async function regenerateShareToken() {
+    try {
+      const data = await regenerateShareTokenApi(album.id);
+
+      setShareToken(data.album.shareToken);
+      toast.success('Lien régénéré');
+    } catch (error) {
+      console.error('REGENERATE TOKEN ERROR:', error);
+      toast.error('Impossible de régénérer le lien');
+    }
+  }
+
+  async function updateAlbumTitle() {
+    const cleanTitle = title.trim();
+
+    if (!cleanTitle) {
+      toast.error('Le nom de l’album ne peut pas être vide');
+      return;
+    }
+
+    if (cleanTitle === album.title) {
+      return;
+    }
+
+    try {
+      setSavingTitle(true);
+
+      const data = await updateAlbumApi(album.id, {
+        title: cleanTitle,
+      });
+
+      setTitle(data.album.title);
+      toast.success('Album renommé');
+      router.refresh();
+    } catch (error) {
+      console.error('UPDATE TITLE ERROR:', error);
+      toast.error('Impossible de renommer l’album');
+    } finally {
+      setSavingTitle(false);
     }
   }
 
@@ -115,114 +181,6 @@ export default function AlbumDetailClient({
 
       return current.filter((_, i) => i !== index);
     });
-  }
-
-  async function deletePhoto(photoId: string) {
-    const confirmed = confirm('Supprimer cette photo ?');
-    if (!confirmed) return;
-
-    const response = await fetch(`/api/albums/${album.id}/photos/${photoId}`, {
-      method: 'DELETE',
-    });
-
-    if (response.ok) {
-      setPhotos((current) => current.filter((photo) => photo.id !== photoId));
-      toast.success('Photo supprimée');
-    }
-  }
-
-  async function setCoverPhoto(photoId: string) {
-    const response = await fetch(`/api/albums/${album.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        coverPhotoId: photoId,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      toast.success('Couverture mise à jour');
-      router.refresh();
-    } else {
-      toast.error(data.error ?? 'Erreur lors du changement de couverture');
-    }
-  }
-
-  async function toggleShare() {
-    const response = await fetch(`/api/albums/${album.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        isShared: !isShared,
-      }),
-    });
-
-    if (response.ok) {
-      setIsShared((current) => !current);
-      toast.success(isShared ? 'Partage désactivé' : 'Partage activé');
-    }
-  }
-
-  async function regenerateShareToken() {
-    const response = await fetch(`/api/albums/${album.id}/share-token`, {
-      method: 'POST',
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      setShareToken(data.album.shareToken);
-      toast.success('Lien régénéré');
-    }
-  }
-
-  async function updateAlbumTitle() {
-    const cleanTitle = title.trim();
-
-    if (!cleanTitle) {
-      toast.error('Le nom de l’album ne peut pas être vide');
-      return;
-    }
-
-    if (cleanTitle === album.title) {
-      return;
-    }
-
-    try {
-      setSavingTitle(true);
-
-      const response = await fetch(`/api/albums/${album.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: cleanTitle,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error ?? 'Erreur lors du renommage');
-        return;
-      }
-
-      setTitle(data.album.title);
-      toast.success('Album renommé');
-      router.refresh();
-    } catch (error) {
-      console.error('UPDATE TITLE ERROR:', error);
-      toast.error('Impossible de renommer l’album');
-    } finally {
-      setSavingTitle(false);
-    }
   }
 
   return (

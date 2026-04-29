@@ -10,15 +10,8 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-type Photo = {
-  id: string;
-  originalName: string;
-  storageKeyOriginal: string;
-  storageKeyLarge: string | null;
-  storageKeyThumbnail: string | null;
-  createdAt: Date;
-};
+import type { Photo } from '@/features/albums/types/album.types';
+import { reorderPhotos } from '../services/photo.api';
 
 type SortablePhotosProps = {
   albumId: string;
@@ -123,22 +116,18 @@ export default function SortablePhotos({
 
     setPhotos(newPhotos);
 
-    const response = await fetch(`/api/albums/${albumId}/photos/reorder`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        photos: newPhotos.map((photo, index) => ({
+    try {
+      await reorderPhotos(
+        albumId,
+        newPhotos.map((photo, index) => ({
           id: photo.id,
           position: index,
         })),
-      }),
-    });
+      );
 
-    if (response.ok) {
       toast.success('Ordre des photos mis à jour');
-    } else {
+    } catch (error) {
+      console.error('REORDER PHOTOS ERROR:', error);
       toast.error('Erreur lors du changement d’ordre');
     }
   }

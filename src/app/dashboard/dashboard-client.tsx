@@ -2,35 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  createAlbum as createAlbumApi,
+  deleteAlbum as deleteAlbumApi,
+  getAlbums as getAlbumsApi,
+} from '@/features/albums/services/album.api';
+import { logout as logoutApi } from '@/features/auth/services/auth.api';
 
-type User = {
-  id: string;
-  email: string;
-  name: string | null;
-};
-
-type Album = {
-  id: string;
-  title: string;
-  slug: string;
-  description: string | null;
-  isShared: boolean;
-  shareToken: string;
-  createdAt: string;
-  coverPhoto: {
-    id: string;
-    storageKeyOriginal: string;
-    storageKeyThumbnail: string | null;
-  } | null;
-  photos: {
-    id: string;
-    storageKeyOriginal: string;
-    storageKeyThumbnail: string | null;
-  }[];
-  _count?: {
-    photos: number;
-  };
-};
+import type { Album } from '@/features/albums/types/album.types';
+import type { User } from '@/features/auth/types/user.types';
 
 export default function DashboardClient({ user }: { user: User }) {
   const router = useRouter();
@@ -41,86 +21,52 @@ export default function DashboardClient({ user }: { user: User }) {
   const [creating, setCreating] = useState(false);
 
   async function loadAlbums() {
-    const response = await fetch('/api/albums');
-    const data = await response.json();
-
-    if (response.ok) {
+    try {
+      const data = await getAlbumsApi();
       setAlbums(data.albums);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
-  async function createAlbum(e: React.FormEvent) {
+  async function handleCreateAlbum(e: React.FormEvent) {
     e.preventDefault();
 
     if (!title.trim()) return;
 
     setCreating(true);
 
-    const response = await fetch('/api/albums', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, description }),
-    });
-
-    if (response.ok) {
+    try {
+      await createAlbumApi({ title, description });
       setTitle('');
       setDescription('');
       await loadAlbums();
+    } finally {
+      setCreating(false);
     }
-
-    setCreating(false);
   }
 
-  async function deleteAlbum(albumId: string) {
+  async function handleDeleteAlbum(albumId: string) {
     const confirmed = confirm('Supprimer cet album ?');
     if (!confirmed) return;
 
-    const response = await fetch(`/api/albums/${albumId}`, {
-      method: 'DELETE',
-    });
+    await deleteAlbumApi(albumId);
 
-    if (response.ok) {
-      setAlbums((current) => current.filter((album) => album.id !== albumId));
-    }
+    setAlbums((current) => current.filter((album) => album.id !== albumId));
   }
 
-  async function logout() {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-    });
+  async function handleLogout() {
+    await logoutApi();
 
     router.push('/login');
     router.refresh();
   }
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function fetchAlbums() {
-      const response = await fetch('/api/albums');
-      const data = await response.json();
-
-      if (!cancelled && response.ok) {
-        setAlbums(data.albums);
-      }
-
-      if (!cancelled) {
-        setLoading(false);
-      }
-    }
-
-    fetchAlbums();
-
-    return () => {
-      cancelled = true;
-    };
+    loadAlbums();
   }, []);
 
-  function formatDate(value: string) {
+  function formatDate(value: string | Date) {
     return new Intl.DateTimeFormat('fr-FR', {
       day: '2-digit',
       month: 'short',
@@ -138,7 +84,7 @@ export default function DashboardClient({ user }: { user: User }) {
           </div>
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white"
           >
             Déconnexion
@@ -153,7 +99,7 @@ export default function DashboardClient({ user }: { user: User }) {
             Ajoute un nouvel album à ta bibliothèque.
           </p>
 
-          <form onSubmit={createAlbum} className="mt-6 space-y-4">
+          <form onSubmit={handleCreateAlbum} className="mt-6 space-y-4">
             <div>
               <label className="text-sm text-zinc-300">Titre</label>
               <input
@@ -275,7 +221,7 @@ export default function DashboardClient({ user }: { user: User }) {
                       </button>
 
                       <button
-                        onClick={() => deleteAlbum(album.id)}
+                        onClick={() => handleDeleteAlbum(album.id)}
                         className="rounded-xl border border-red-500/20 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10"
                       >
                         Supprimer
