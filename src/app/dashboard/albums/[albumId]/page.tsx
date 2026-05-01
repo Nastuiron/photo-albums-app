@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/current-user';
 import { prisma } from '@/lib/prisma';
-import AlbumDetailClient from './album-detail-client';
+import AlbumDetailClient from '../../../../features/albums/components/AlbumDetailClient';
 
 type Props = {
   params: Promise<{

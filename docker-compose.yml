@@ -11,6 +11,12 @@ services:
       - "5433:5432"
     volumes:
       - photo_albums_data:/var/lib/postgresql/data
+    networks:
+      - nastuiron_proxy
 
 volumes:
   photo_albums_data:
+
+networks:
+  nastuiron_proxy:
+    external: true

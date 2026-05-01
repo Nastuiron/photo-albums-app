@@ -2,18 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
-import type { Photo, AlbumDetail } from '@/features/albums/types/album.types';
-import {
-  regenerateShareToken as regenerateShareTokenApi,
-  updateAlbum as updateAlbumApi,
-} from '@/features/albums/services/album.api';
-
-import {
-  deletePhoto as deletePhotoApi,
-  uploadPhotos as uploadPhotosApi,
-} from '@/features/albums/services/photo.api';
+import type { AlbumDetail } from '@/features/albums/types/album.types';
+import { useAlbumPhotos } from '@/features/albums/hooks/useAlbumPhotos';
+import { useAlbumShare } from '@/features/albums/hooks/useAlbumShare';
+import { useAlbumSettings } from '@/features/albums/hooks/useAlbumSettings';
 
 type PreviewFile = {
   file: File;
@@ -35,125 +28,33 @@ export default function AlbumDetailClient({
   appUrl: string;
 }) {
   const router = useRouter();
-  const [photos, setPhotos] = useState<Photo[]>(album.photos);
-  const [uploading, setUploading] = useState(false);
+  const {
+    photos,
+    setPhotos,
+    uploading,
+    uploadPhotos: uploadPhotosFromHook,
+    deletePhoto,
+  } = useAlbumPhotos(album.id, album.photos);
   const [files, setFiles] = useState<PreviewFile[]>([]);
-  const [isShared, setIsShared] = useState(album.isShared);
-  const [shareToken, setShareToken] = useState(album.shareToken);
-  const [title, setTitle] = useState(album.title);
-  const [savingTitle, setSavingTitle] = useState(false);
+  const {
+    isShared,
+    shareToken,
+    toggleShare,
+    regenerateShareToken,
+    copyShareLink,
+  } = useAlbumShare(album.id, album.isShared, album.shareToken);
+  const { title, setTitle, savingTitle, updateAlbumTitle, setCoverPhoto } =
+    useAlbumSettings(album.id, album.title, router.refresh);
 
-  async function uploadPhotos(e: React.FormEvent<HTMLFormElement>) {
+  async function handleUploadPhotos(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (files.length === 0) return;
+    const selectedFiles = files.map(({ file }) => file);
 
-    try {
-      setUploading(true);
+    await uploadPhotosFromHook(selectedFiles);
 
-      const formData = new FormData();
-
-      files.forEach(({ file }) => {
-        formData.append('photos', file);
-      });
-
-      const data = await uploadPhotosApi(album.id, formData);
-
-      setPhotos((current) => [...current, ...data.photos]);
-      files.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
-      setFiles([]);
-      toast.success('Photos uploadées avec succès');
-    } catch (error) {
-      console.error('UPLOAD ERROR:', error);
-      toast.error("Erreur lors de l'upload des photos");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function deletePhoto(photoId: string) {
-    const confirmed = confirm('Supprimer cette photo ?');
-    if (!confirmed) return;
-
-    try {
-      await deletePhotoApi(album.id, photoId);
-
-      setPhotos((current) => current.filter((photo) => photo.id !== photoId));
-      toast.success('Photo supprimée');
-    } catch (error) {
-      console.error('DELETE PHOTO ERROR:', error);
-      toast.error('Erreur lors de la suppression de la photo');
-    }
-  }
-
-  async function setCoverPhoto(photoId: string) {
-    try {
-      await updateAlbumApi(album.id, {
-        coverPhotoId: photoId,
-      });
-
-      toast.success('Couverture mise à jour');
-      router.refresh();
-    } catch (error) {
-      console.error('SET COVER ERROR:', error);
-      toast.error('Erreur lors du changement de couverture');
-    }
-  }
-
-  async function toggleShare() {
-    try {
-      await updateAlbumApi(album.id, {
-        isShared: !isShared,
-      });
-
-      setIsShared((current) => !current);
-      toast.success(isShared ? 'Partage désactivé' : 'Partage activé');
-    } catch (error) {
-      console.error('TOGGLE SHARE ERROR:', error);
-      toast.error('Impossible de modifier le partage');
-    }
-  }
-
-  async function regenerateShareToken() {
-    try {
-      const data = await regenerateShareTokenApi(album.id);
-
-      setShareToken(data.album.shareToken);
-      toast.success('Lien régénéré');
-    } catch (error) {
-      console.error('REGENERATE TOKEN ERROR:', error);
-      toast.error('Impossible de régénérer le lien');
-    }
-  }
-
-  async function updateAlbumTitle() {
-    const cleanTitle = title.trim();
-
-    if (!cleanTitle) {
-      toast.error('Le nom de l’album ne peut pas être vide');
-      return;
-    }
-
-    if (cleanTitle === album.title) {
-      return;
-    }
-
-    try {
-      setSavingTitle(true);
-
-      const data = await updateAlbumApi(album.id, {
-        title: cleanTitle,
-      });
-
-      setTitle(data.album.title);
-      toast.success('Album renommé');
-      router.refresh();
-    } catch (error) {
-      console.error('UPDATE TITLE ERROR:', error);
-      toast.error('Impossible de renommer l’album');
-    } finally {
-      setSavingTitle(false);
-    }
+    files.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+    setFiles([]);
   }
 
   function handleFiles(selectedFiles: FileList | null) {
@@ -275,16 +176,7 @@ export default function AlbumDetailClient({
               />
 
               <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(
-                      `${appUrl}/a/${shareToken}`,
-                    );
-                    toast.success('Lien copié !');
-                  } catch {
-                    toast.error('Impossible de copier');
-                  }
-                }}
+                onClick={() => copyShareLink(appUrl)}
                 className="rounded-xl border border-white/10 px-4 py-2 text-sm hover:bg-white/10"
               >
                 Copier
@@ -295,7 +187,7 @@ export default function AlbumDetailClient({
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-8">
-        <form onSubmit={uploadPhotos} className="mb-8 space-y-6">
+        <form onSubmit={handleUploadPhotos} className="mb-8 space-y-6">
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {

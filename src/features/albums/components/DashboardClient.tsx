@@ -1,59 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  createAlbum as createAlbumApi,
-  deleteAlbum as deleteAlbumApi,
-  getAlbums as getAlbumsApi,
-} from '@/features/albums/services/album.api';
 import { logout as logoutApi } from '@/features/auth/services/auth.api';
-
-import type { Album } from '@/features/albums/types/album.types';
 import type { User } from '@/features/auth/types/user.types';
+import { useAlbums } from '@/features/albums/hooks/useAlbums';
 
 export default function DashboardClient({ user }: { user: User }) {
   const router = useRouter();
-  const [albums, setAlbums] = useState<Album[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-
-  async function loadAlbums() {
-    try {
-      const data = await getAlbumsApi();
-      setAlbums(data.albums);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCreateAlbum(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (!title.trim()) return;
-
-    setCreating(true);
-
-    try {
-      await createAlbumApi({ title, description });
-      setTitle('');
-      setDescription('');
-      await loadAlbums();
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function handleDeleteAlbum(albumId: string) {
-    const confirmed = confirm('Supprimer cet album ?');
-    if (!confirmed) return;
-
-    await deleteAlbumApi(albumId);
-
-    setAlbums((current) => current.filter((album) => album.id !== albumId));
-  }
+  const { albums, loading, creating, createAlbum, deleteAlbum } = useAlbums();
 
   async function handleLogout() {
     await logoutApi();
@@ -61,10 +18,6 @@ export default function DashboardClient({ user }: { user: User }) {
     router.push('/login');
     router.refresh();
   }
-
-  useEffect(() => {
-    loadAlbums();
-  }, []);
 
   function formatDate(value: string | Date) {
     return new Intl.DateTimeFormat('fr-FR', {
@@ -99,7 +52,15 @@ export default function DashboardClient({ user }: { user: User }) {
             Ajoute un nouvel album à ta bibliothèque.
           </p>
 
-          <form onSubmit={handleCreateAlbum} className="mt-6 space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              createAlbum({ title, description });
+              setTitle('');
+              setDescription('');
+            }}
+            className="mt-6 space-y-4"
+          >
             <div>
               <label className="text-sm text-zinc-300">Titre</label>
               <input
@@ -221,7 +182,7 @@ export default function DashboardClient({ user }: { user: User }) {
                       </button>
 
                       <button
-                        onClick={() => handleDeleteAlbum(album.id)}
+                        onClick={() => deleteAlbum(album.id)}
                         className="rounded-xl border border-red-500/20 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10"
                       >
                         Supprimer

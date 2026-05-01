@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/current-user';
-import DashboardClient from './dashboard-client';
+import DashboardClient from '../../features/albums/components/DashboardClient';
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import PublicAlbumClient from './public-album-client';
+import PublicAlbumClient from '../../../features/albums/components/PublicAlbumClient';
 
 type Props = {
   params: Promise<{
