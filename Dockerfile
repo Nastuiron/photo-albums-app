@@ -7,6 +7,8 @@ RUN npm install
 
 COPY . .
 
+ENV DATABASE_URL="postgresql://photo_admin:photo_password@postgres:5432/photo_albums"
+
 RUN npx prisma generate
 RUN npm run build
 
