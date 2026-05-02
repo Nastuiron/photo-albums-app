@@ -1,4 +1,20 @@
 services:
+  app:
+    container_name: photo_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://photo_admin:photo_password@postgres:5432/photo_albums
+      NEXT_PUBLIC_APP_URL: https://albums.nastuiron.fr
+    depends_on:
+      - postgres
+    networks:
+      - nastuiron_proxy
+    ports:
+      - "3000:3000"
+
   postgres:
     image: postgres:16
     container_name: photo_albums_db
