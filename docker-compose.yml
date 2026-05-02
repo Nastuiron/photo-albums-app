@@ -8,6 +8,7 @@ services:
     environment:
       DATABASE_URL: postgresql://photo_admin:photo_password@postgres:5432/photo_albums
       NEXT_PUBLIC_APP_URL: https://albums.nastuiron.fr
+      JWT_SECRET: "un_secret_ultra_long_et_random"
     depends_on:
       - postgres
     networks:
