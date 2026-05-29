@@ -34,25 +34,44 @@ export function useAlbumPhotos(albumId: string, initialPhotos: Photo[]) {
     }
   }
 
-  async function deletePhoto(photoId: string) {
-    const confirmed = confirm('Supprimer cette photo ?');
+  async function deletePhotos(photoIds: string[]) {
+    if (photoIds.length === 0) return;
+
+    const confirmed = confirm(
+      photoIds.length === 1
+        ? 'Supprimer cette photo ?'
+        : `Supprimer ces ${photoIds.length} photos ?`,
+    );
+
     if (!confirmed) return;
 
     try {
-      await deletePhotoApi(albumId, photoId);
+      await Promise.all(
+        photoIds.map((photoId) => deletePhotoApi(albumId, photoId)),
+      );
 
-      setPhotos((current) => current.filter((photo) => photo.id !== photoId));
-      toast.success('Photo supprimée');
+      setPhotos((current) =>
+        current.filter((photo) => !photoIds.includes(photo.id)),
+      );
+      toast.success(
+        photoIds.length === 1 ? 'Photo supprimée' : 'Photos supprimées',
+      );
     } catch (error) {
       console.error('DELETE PHOTO ERROR:', error);
-      toast.error('Erreur lors de la suppression de la photo');
+      toast.error('Erreur lors de la suppression');
     }
   }
+
+  async function deletePhoto(photoId: string) {
+    await deletePhotos([photoId]);
+  }
+
   return {
     photos,
     setPhotos,
     uploading,
     uploadPhotos,
     deletePhoto,
+    deletePhotos,
   };
 }

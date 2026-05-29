@@ -33,7 +33,7 @@ export default function AlbumDetailClient({
     setPhotos,
     uploading,
     uploadPhotos: uploadPhotosFromHook,
-    deletePhoto,
+    deletePhotos,
   } = useAlbumPhotos(album.id, album.photos);
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const {
@@ -282,8 +282,9 @@ export default function AlbumDetailClient({
             albumId={album.id}
             photos={photos}
             setPhotos={setPhotos}
+            coverPhotoId={album.coverPhoto?.id ?? null}
             setCoverPhoto={setCoverPhoto}
-            deletePhoto={deletePhoto}
+            deletePhotos={deletePhotos}
           />
         )}
       </section>
