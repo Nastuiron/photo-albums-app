@@ -49,6 +49,27 @@ export async function deleteBookPhoto(photoId: string) {
   return response.json();
 }
 
+export async function reorderBookPhotos(
+  photos: {
+    id: string;
+    position: number;
+  }[],
+) {
+  const response = await fetch('/api/book/photos/reorder', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ photos }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Erreur lors du changement d’ordre');
+  }
+
+  return response.json();
+}
+
 export async function regenerateBookShareToken() {
   const response = await fetch('/api/book/share-token', {
     method: 'POST',

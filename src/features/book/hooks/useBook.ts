@@ -5,6 +5,7 @@ import {
   deleteBookPhoto as deleteBookPhotoApi,
   getBook as getBookApi,
   regenerateBookShareToken,
+  reorderBookPhotos,
   updateBook as updateBookApi,
   uploadBookPhotos as uploadBookPhotosApi,
 } from '@/features/book/services/book.api';
@@ -55,18 +56,54 @@ export function useBook() {
     }
   }
 
-  async function deletePhoto(photoId: string) {
-    const confirmed = confirm('Supprimer cette photo du book ?');
+  async function deletePhotos(photoIds: string[]) {
+    if (photoIds.length === 0) return;
+
+    const confirmed = confirm(
+      photoIds.length === 1
+        ? 'Supprimer cette photo du book ?'
+        : `Supprimer ces ${photoIds.length} photos du book ?`,
+    );
+
     if (!confirmed) return;
 
     try {
-      await deleteBookPhotoApi(photoId);
+      await Promise.all(photoIds.map((photoId) => deleteBookPhotoApi(photoId)));
 
-      setPhotos((current) => current.filter((photo) => photo.id !== photoId));
-      toast.success('Photo supprimée du book');
+      setPhotos((current) =>
+        current.filter((photo) => !photoIds.includes(photo.id)),
+      );
+      toast.success(
+        photoIds.length === 1
+          ? 'Photo supprimée du book'
+          : 'Photos supprimées du book',
+      );
     } catch (error) {
       console.error('DELETE BOOK PHOTO ERROR:', error);
       toast.error('Impossible de supprimer la photo');
+    }
+  }
+
+  async function deletePhoto(photoId: string) {
+    await deletePhotos([photoId]);
+  }
+
+  async function reorderPhotos(newPhotos: BookPhoto[]) {
+    setPhotos(newPhotos);
+
+    try {
+      await reorderBookPhotos(
+        newPhotos.map((photo, index) => ({
+          id: photo.id,
+          position: index,
+        })),
+      );
+
+      toast.success('Ordre du book mis à jour');
+    } catch (error) {
+      console.error('REORDER BOOK PHOTOS ERROR:', error);
+      toast.error('Erreur lors du changement d’ordre');
+      await loadBook();
     }
   }
 
@@ -144,6 +181,8 @@ export function useBook() {
     regeneratingShareToken,
     uploadPhotos,
     deletePhoto,
+    deletePhotos,
+    reorderPhotos,
     updateTitle,
     regenerateShareToken,
     copyShareLink,

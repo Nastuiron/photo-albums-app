@@ -1,7 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import { Copy, ImagePlus, RefreshCw, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  Check,
+  Copy,
+  GripHorizontal,
+  ImagePlus,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useBook } from '@/features/book/hooks/useBook';
 import type { BookPhoto } from '@/features/book/types/book.types';
 
@@ -12,6 +28,153 @@ type PreviewFile = {
 
 function bookPhotoUrl(photoId: string, variant: 'thumb' | 'image' = 'thumb') {
   return `/api/book/photos/${photoId}/file?variant=${variant}`;
+}
+
+function SortableBookPhotoCard({
+  photo,
+  index,
+  isSelected,
+  onOpen,
+  onToggleSelect,
+}: {
+  photo: BookPhoto;
+  index: number;
+  isSelected: boolean;
+  onOpen: (photo: BookPhoto) => void;
+  onToggleSelect: (photoId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: photo.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    animation: `fadeIn 0.4s ease ${index * 40}ms both`,
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={`group relative overflow-hidden rounded-2xl border bg-zinc-900 transition ${
+        isSelected
+          ? 'border-emerald-400/70 ring-2 ring-emerald-400/20'
+          : 'border-white/10 hover:border-white/25'
+      }`}
+    >
+      <div className="relative">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={bookPhotoUrl(photo.id, 'thumb')}
+          alt={photo.originalName}
+          draggable={false}
+          onClick={() => onOpen(photo)}
+          className={`aspect-[4/3] w-full cursor-zoom-in select-none object-cover transition duration-500 group-hover:scale-105 ${
+            isSelected ? 'brightness-75' : 'group-hover:brightness-75'
+          }`}
+        />
+
+        <button
+          type="button"
+          aria-label={
+            isSelected ? 'Retirer de la sélection' : 'Sélectionner la photo'
+          }
+          onClick={() => onToggleSelect(photo.id)}
+          className={`absolute left-3 top-3 flex size-9 items-center justify-center rounded-full border text-white shadow-lg transition ${
+            isSelected
+              ? 'border-emerald-300 bg-emerald-500 text-zinc-950 opacity-100'
+              : 'border-white/30 bg-black/50 opacity-0 hover:bg-black/70 group-hover:opacity-100'
+          }`}
+        >
+          {isSelected && <Check size={18} strokeWidth={3} />}
+        </button>
+
+        <button
+          type="button"
+          aria-label="Déplacer la photo"
+          className="absolute right-3 top-3 flex size-9 cursor-grab items-center justify-center rounded-full border border-white/20 bg-black/55 text-white opacity-0 shadow-lg transition hover:bg-black/75 group-hover:opacity-100 active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripHorizontal size={18} />
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 p-3">
+        <p className="min-w-0 truncate text-xs text-zinc-300">
+          {photo.originalName}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+function BookSelectionDrawer({
+  selectedPhotos,
+  onClearSelection,
+  onDelete,
+}: {
+  selectedPhotos: BookPhoto[];
+  onClearSelection: () => void;
+  onDelete: () => void;
+}) {
+  if (selectedPhotos.length === 0) return null;
+
+  return (
+    <aside className="fixed bottom-4 left-4 right-4 z-30 rounded-2xl border border-white/10 bg-zinc-900/95 p-4 text-white shadow-2xl shadow-black/40 backdrop-blur md:bottom-6 md:left-auto md:right-6 md:top-24 md:w-80">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold">
+            {selectedPhotos.length} sélectionnée
+            {selectedPhotos.length > 1 ? 's' : ''}
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">
+            Action appliquée au book.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Fermer la sélection"
+          onClick={onClearSelection}
+          className="flex size-9 items-center justify-center rounded-full border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white"
+        >
+          <X size={17} />
+        </button>
+      </div>
+
+      <div className="mt-4 max-h-40 space-y-2 overflow-auto pr-1 md:max-h-72">
+        {selectedPhotos.map((photo) => (
+          <div
+            key={photo.id}
+            className="flex items-center gap-3 rounded-xl bg-white/[0.04] p-2"
+          >
+            <div className="size-12 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bookPhotoUrl(photo.id)}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </div>
+
+            <p className="min-w-0 truncate text-xs text-zinc-300">
+              {photo.originalName}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={onDelete}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/25 px-4 py-3 text-sm font-medium text-red-300 hover:bg-red-500/10"
+      >
+        <Trash2 size={17} />
+        Supprimer la sélection
+      </button>
+    </aside>
+  );
 }
 
 function BookTitleForm({
@@ -64,14 +227,20 @@ export default function BookPanel({ appUrl }: { appUrl: string }) {
     savingTitle,
     regeneratingShareToken,
     uploadPhotos,
-    deletePhoto,
+    deletePhotos,
+    reorderPhotos,
     updateTitle,
     regenerateShareToken,
     copyShareLink,
   } = useBook();
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<BookPhoto | null>(null);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const shareUrl = book?.shareToken ? `${appUrl}/b/${book.shareToken}` : '';
+  const selectedPhotos = useMemo(
+    () => photos.filter((photo) => selectedPhotoIds.includes(photo.id)),
+    [photos, selectedPhotoIds],
+  );
 
   function handleFiles(selectedFiles: FileList | null) {
     if (!selectedFiles) return;
@@ -107,6 +276,36 @@ export default function BookPanel({ appUrl }: { appUrl: string }) {
 
     files.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
     setFiles([]);
+  }
+
+  function togglePhotoSelection(photoId: string) {
+    setSelectedPhotoIds((current) =>
+      current.includes(photoId)
+        ? current.filter((id) => id !== photoId)
+        : [...current, photoId],
+    );
+  }
+
+  function clearSelection() {
+    setSelectedPhotoIds([]);
+  }
+
+  async function handleDeleteSelection() {
+    await deletePhotos(selectedPhotos.map((photo) => photo.id));
+    clearSelection();
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = photos.findIndex((photo) => photo.id === active.id);
+    const newIndex = photos.findIndex((photo) => photo.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    await reorderPhotos(arrayMove(photos, oldIndex, newIndex));
   }
 
   return (
@@ -256,44 +455,37 @@ export default function BookPanel({ appUrl }: { appUrl: string }) {
             </p>
           </div>
         ) : (
-          <div
-            className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
-            onContextMenu={(e) => e.preventDefault()}
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            {photos.map((photo, index) => (
-              <article
-                key={photo.id}
-                style={{
-                  animation: `fadeIn 0.4s ease ${index * 40}ms both`,
-                }}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-900"
+            <SortableContext
+              items={photos.map((photo) => photo.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div
+                className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
+                onContextMenu={(e) => e.preventDefault()}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={bookPhotoUrl(photo.id, 'thumb')}
-                  alt={photo.originalName}
-                  draggable={false}
-                  onClick={() => setSelectedPhoto(photo)}
-                  className="aspect-[4/3] w-full cursor-zoom-in select-none object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                {photos.map((photo, index) => (
+                  <SortableBookPhotoCard
+                    key={photo.id}
+                    photo={photo}
+                    index={index}
+                    isSelected={selectedPhotoIds.includes(photo.id)}
+                    onOpen={setSelectedPhoto}
+                    onToggleSelect={togglePhotoSelection}
+                  />
+                ))}
+              </div>
 
-                <div className="flex items-center justify-between gap-2 p-3">
-                  <p className="min-w-0 truncate text-xs text-zinc-300">
-                    {photo.originalName}
-                  </p>
-
-                  <button
-                    type="button"
-                    aria-label="Supprimer du book"
-                    onClick={() => deletePhoto(photo.id)}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-full border border-red-500/20 text-red-300 opacity-0 transition hover:bg-red-500/10 group-hover:opacity-100"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+              <BookSelectionDrawer
+                selectedPhotos={selectedPhotos}
+                onClearSelection={clearSelection}
+                onDelete={handleDeleteSelection}
+              />
+            </SortableContext>
+          </DndContext>
         )}
       </section>
 
