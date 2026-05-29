@@ -5,6 +5,7 @@ import {
   deleteBookPhoto as deleteBookPhotoApi,
   getBook as getBookApi,
   regenerateBookShareToken,
+  updateBook as updateBookApi,
   uploadBookPhotos as uploadBookPhotosApi,
 } from '@/features/book/services/book.api';
 
@@ -13,6 +14,7 @@ export function useBook() {
   const [photos, setPhotos] = useState<BookPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [savingTitle, setSavingTitle] = useState(false);
   const [regeneratingShareToken, setRegeneratingShareToken] = useState(false);
 
   async function loadBook() {
@@ -68,6 +70,36 @@ export function useBook() {
     }
   }
 
+  async function updateTitle(title: string) {
+    const cleanTitle = title.trim();
+
+    if (cleanTitle.length < 2) {
+      toast.error('Le nom du book doit contenir au moins 2 caractères');
+      return;
+    }
+
+    try {
+      setSavingTitle(true);
+
+      const data = await updateBookApi({ title: cleanTitle });
+
+      setBook((current) =>
+        current
+          ? {
+              ...current,
+              title: data.book.title,
+            }
+          : data.book,
+      );
+      toast.success('Nom du book mis à jour');
+    } catch (error) {
+      console.error('UPDATE BOOK TITLE ERROR:', error);
+      toast.error('Impossible de renommer le book');
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
   async function regenerateShareToken() {
     try {
       setRegeneratingShareToken(true);
@@ -108,9 +140,11 @@ export function useBook() {
     photos,
     loading,
     uploading,
+    savingTitle,
     regeneratingShareToken,
     uploadPhotos,
     deletePhoto,
+    updateTitle,
     regenerateShareToken,
     copyShareLink,
   };

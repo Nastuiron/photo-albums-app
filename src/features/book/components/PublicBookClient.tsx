@@ -74,7 +74,7 @@ export default function PublicBookClient({ book }: { book: PublicBook }) {
         <header className="mb-8">
           <p className="text-sm text-zinc-500">Book public</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">
-            {book.ownerName ? `Book de ${book.ownerName}` : book.title}
+            {book.title}
           </h1>
           <p className="mt-2 text-sm text-zinc-400">
             {book.photos.length} photo{book.photos.length > 1 ? 's' : ''}

@@ -14,15 +14,58 @@ function bookPhotoUrl(photoId: string, variant: 'thumb' | 'image' = 'thumb') {
   return `/api/book/photos/${photoId}/file?variant=${variant}`;
 }
 
+function BookTitleForm({
+  initialTitle,
+  savingTitle,
+  updateTitle,
+}: {
+  initialTitle: string;
+  savingTitle: boolean;
+  updateTitle: (title: string) => Promise<void>;
+}) {
+  const [bookTitle, setBookTitle] = useState(initialTitle);
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-zinc-950 p-3">
+      <label className="text-sm font-medium" htmlFor="bookTitle">
+        Nom public du book
+      </label>
+      <input
+        id="bookTitle"
+        value={bookTitle}
+        onChange={(e) => setBookTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            updateTitle(bookTitle);
+          }
+        }}
+        className="mt-3 w-full rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+        placeholder="Mon book"
+      />
+
+      <button
+        type="button"
+        onClick={() => updateTitle(bookTitle)}
+        disabled={savingTitle}
+        className="mt-3 w-full rounded-lg bg-white px-3 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-200 disabled:opacity-60"
+      >
+        {savingTitle ? 'Sauvegarde...' : 'Sauvegarder'}
+      </button>
+    </div>
+  );
+}
+
 export default function BookPanel({ appUrl }: { appUrl: string }) {
   const {
     book,
     photos,
     loading,
     uploading,
+    savingTitle,
     regeneratingShareToken,
     uploadPhotos,
     deletePhoto,
+    updateTitle,
     regenerateShareToken,
     copyShareLink,
   } = useBook();
@@ -75,6 +118,15 @@ export default function BookPanel({ appUrl }: { appUrl: string }) {
             Galerie publique, sans action de téléchargement.
           </p>
         </div>
+
+        {book && (
+          <BookTitleForm
+            key={book.id}
+            initialTitle={book.title}
+            savingTitle={savingTitle}
+            updateTitle={updateTitle}
+          />
+        )}
 
         <form onSubmit={handleUploadPhotos} className="space-y-4">
           <div
@@ -179,7 +231,9 @@ export default function BookPanel({ appUrl }: { appUrl: string }) {
       <section className="min-w-0">
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Mon book</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {book?.title ?? 'Mon book'}
+            </h2>
             <p className="mt-1 text-sm text-zinc-400">
               Galerie publique permanente.
             </p>

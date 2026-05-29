@@ -21,6 +21,22 @@ export async function uploadBookPhotos(formData: FormData) {
   return response.json();
 }
 
+export async function updateBook(data: { title: string }) {
+  const response = await fetch('/api/book', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error('Impossible de modifier le book.');
+  }
+
+  return response.json();
+}
+
 export async function deleteBookPhoto(photoId: string) {
   const response = await fetch(`/api/book/photos/${photoId}`, {
     method: 'DELETE',
