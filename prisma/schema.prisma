@@ -13,9 +13,45 @@ model User {
   passwordHash String
 
   albums       Album[]
+  book         Book?
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model Book {
+  id        String      @id @default(cuid())
+  userId    String      @unique
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title     String      @default("Mon book")
+  shareToken String     @unique
+  photos    BookPhoto[]
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model BookPhoto {
+  id                  String   @id @default(cuid())
+  bookId              String
+  book                Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  filename            String
+  originalName        String
+  mimeType            String
+  size                Int
+  width               Int?
+  height              Int?
+
+  storageKeyOriginal  String
+  storageKeyThumbnail String
+
+  position            Int      @default(0)
+
+  createdAt           DateTime @default(now())
+
+  @@index([bookId])
 }
 
 model Album {

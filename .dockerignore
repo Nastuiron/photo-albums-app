@@ -1,0 +1,12 @@
+.git
+.next
+node_modules
+uploads
+.env
+*.wav
+*.tsbuildinfo
+npm-debug.log*
+Dockerfile
+docker-compose.yml
+.agents
+.codex

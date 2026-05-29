@@ -64,6 +64,7 @@ function SortablePhotoCard({
           }`}
           alt={photo.originalName}
           fill
+          unoptimized
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className={`object-cover transition duration-200 ${
             isSelected ? 'brightness-75' : 'group-hover:brightness-75'
@@ -163,6 +164,7 @@ function SelectionDrawer({
                 }`}
                 alt=""
                 fill
+                unoptimized
                 sizes="48px"
                 className="object-cover"
               />

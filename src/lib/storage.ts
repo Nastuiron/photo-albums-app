@@ -211,6 +211,143 @@ export async function saveAlbumPhoto(params: { albumId: string; file: File }) {
   throw new Error('Invalid STORAGE_DRIVER');
 }
 
+async function saveBookPhotoLocal(params: { bookId: string; file: File }) {
+  const { bookId, file } = params;
+
+  const bytes = await file.arrayBuffer();
+  const inputBuffer = Buffer.from(bytes);
+  const id = crypto.randomUUID();
+
+  const filename = `${id}.webp`;
+  const thumbnailFilename = `${id}-thumbnail.webp`;
+  const bookDir = path.join(UPLOAD_DIR, 'books', bookId);
+  const originalDir = path.join(bookDir, 'original');
+  const thumbnailDir = path.join(bookDir, 'thumbnail');
+
+  await fs.mkdir(originalDir, { recursive: true });
+  await fs.mkdir(thumbnailDir, { recursive: true });
+
+  let metadata: sharp.Metadata;
+
+  try {
+    metadata = await sharp(inputBuffer).metadata();
+  } catch {
+    throw new Error('Fichier image invalide');
+  }
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error('Fichier image invalide');
+  }
+
+  const imageBuffer = await sharp(inputBuffer)
+    .rotate()
+    .webp({ quality: 90 })
+    .toBuffer();
+
+  const thumbnailBuffer = await sharp(inputBuffer)
+    .rotate()
+    .resize({
+      width: 720,
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 78 })
+    .toBuffer();
+
+  await fs.writeFile(path.join(originalDir, filename), imageBuffer);
+  await fs.writeFile(
+    path.join(thumbnailDir, thumbnailFilename),
+    thumbnailBuffer,
+  );
+
+  return {
+    filename,
+    size: imageBuffer.length,
+    width: metadata.width ?? null,
+    height: metadata.height ?? null,
+    storageKeyOriginal: `books/${bookId}/original/${filename}`,
+    storageKeyThumbnail: `books/${bookId}/thumbnail/${thumbnailFilename}`,
+  };
+}
+
+async function saveBookPhotoR2(params: { bookId: string; file: File }) {
+  const { bookId, file } = params;
+
+  const bytes = await file.arrayBuffer();
+  const inputBuffer = Buffer.from(bytes);
+  const id = crypto.randomUUID();
+
+  const originalKey = `books/${bookId}/original/${id}.webp`;
+  const thumbnailKey = `books/${bookId}/thumbnail/${id}-thumbnail.webp`;
+
+  let metadata: sharp.Metadata;
+
+  try {
+    metadata = await sharp(inputBuffer).metadata();
+  } catch {
+    throw new Error('Fichier image invalide');
+  }
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error('Fichier image invalide');
+  }
+
+  const imageBuffer = await sharp(inputBuffer)
+    .rotate()
+    .webp({ quality: 90 })
+    .toBuffer();
+
+  const thumbnailBuffer = await sharp(inputBuffer)
+    .rotate()
+    .resize({
+      width: 720,
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 78 })
+    .toBuffer();
+
+  await Promise.all([
+    r2.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: originalKey,
+        Body: imageBuffer,
+        ContentType: 'image/webp',
+      }),
+    ),
+    r2.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: thumbnailKey,
+        Body: thumbnailBuffer,
+        ContentType: 'image/webp',
+      }),
+    ),
+  ]);
+
+  return {
+    filename: `${id}.webp`,
+    size: imageBuffer.length,
+    width: metadata.width ?? null,
+    height: metadata.height ?? null,
+    storageKeyOriginal: originalKey,
+    storageKeyThumbnail: thumbnailKey,
+  };
+}
+
+export async function saveBookPhoto(params: { bookId: string; file: File }) {
+  const driver = process.env.STORAGE_DRIVER ?? 'local';
+
+  if (driver === 'local') {
+    return saveBookPhotoLocal(params);
+  }
+
+  if (driver === 'r2') {
+    return saveBookPhotoR2(params);
+  }
+
+  throw new Error('Invalid STORAGE_DRIVER');
+}
+
 async function deleteAlbumPhotoR2(storageKeys: {
   original?: string | null;
   large?: string | null;
@@ -250,6 +387,16 @@ export async function deleteAlbumPhoto(storageKeys: {
   }
 
   throw new Error('Invalid STORAGE_DRIVER');
+}
+
+export async function deleteBookPhoto(storageKeys: {
+  original?: string | null;
+  thumbnail?: string | null;
+}) {
+  return deleteAlbumPhoto({
+    original: storageKeys.original,
+    thumbnail: storageKeys.thumbnail,
+  });
 }
 
 export async function deleteAlbumDirectory(albumId: string) {

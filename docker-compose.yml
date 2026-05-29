@@ -12,11 +12,12 @@ services:
       NEXT_PUBLIC_APP_URL: https://albums.nastuiron.fr
       JWT_SECRET: "un_secret_ultra_long_et_random"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - nastuiron_proxy
     ports:
-      - "3000:3000"
+      - "3001:3000"
 
   postgres:
     image: postgres:16
@@ -30,6 +31,11 @@ services:
       - "5433:5432"
     volumes:
       - photo_albums_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U photo_admin -d photo_albums"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - nastuiron_proxy
 
@@ -38,4 +44,4 @@ volumes:
 
 networks:
   nastuiron_proxy:
-    external: true
+    name: nastuiron_proxy

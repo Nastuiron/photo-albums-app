@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -41,6 +42,11 @@ export async function POST(req: Request) {
       email,
       name,
       passwordHash: hashedPassword,
+      book: {
+        create: {
+          shareToken: crypto.randomBytes(32).toString('hex'),
+        },
+      },
     },
   });
 
