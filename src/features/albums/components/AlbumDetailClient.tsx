@@ -120,6 +120,9 @@ export default function AlbumDetailClient({
             {album.description && (
               <p className="mt-1 text-sm text-zinc-400">{album.description}</p>
             )}
+            <p className="mt-1 text-sm text-zinc-500">
+              {photos.length} photo{photos.length > 1 ? 's' : ''}
+            </p>
           </div>
 
           <span
@@ -221,46 +224,50 @@ export default function AlbumDetailClient({
             </label>
           </div>
 
-          {files.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {files.map((file, index) => (
-                <div
-                  key={`${file.file.name}-${index}`}
-                  className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={file.previewUrl}
-                    alt={file.file.name}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                  <div className="flex items-center justify-between gap-3 p-3">
-                    <p className="truncate text-xs text-zinc-300">
-                      {file.file.name}
-                    </p>
+          <div className="flex cursor-pointer flex-col items-center justify-center gap-6 rounded-3xl border border-dashed border-white/20 bg-zinc-900 p-10 text-center hover:border-white/40">
+            {files.length > 0 && (
+              <button
+                type="submit"
+                disabled={uploading}
+                className="w-full rounded-xl bg-white px-4 py-3 font-medium text-zinc-950 hover:bg-zinc-200 disabled:opacity-60"
+              >
+                {uploading
+                  ? 'Upload...'
+                  : `Uploader ${files.length} fichier(s)`}
+              </button>
+            )}
 
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="text-xs text-red-400 hover:text-red-300"
-                    >
-                      Retirer
-                    </button>
+            {files.length > 0 && (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {files.map((file, index) => (
+                  <div
+                    key={`${file.file.name}-${index}`}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={file.previewUrl}
+                      alt={file.file.name}
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                    <div className="flex items-center justify-between gap-3 p-3">
+                      <p className="truncate text-xs text-zinc-300">
+                        {file.file.name}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="text-xs text-red-400 hover:text-red-300"
+                      >
+                        Retirer
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {files.length > 0 && (
-            <button
-              type="submit"
-              disabled={uploading}
-              className="w-full rounded-xl bg-white px-4 py-3 font-medium text-zinc-950 hover:bg-zinc-200 disabled:opacity-60"
-            >
-              {uploading ? 'Upload...' : `Uploader ${files.length} fichier(s)`}
-            </button>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </form>
 
         {photos.length === 0 ? (
