@@ -135,6 +135,9 @@ export default function DashboardClient({ user }: { user: User }) {
                         <span className="text-3xl">📷</span>
                       </div>
                     )}
+                    <div className="absolute right-3 top-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+                      {album._count?.photos} 📷
+                    </div>
                   </div>
 
                   <div className="space-y-4 p-5">
